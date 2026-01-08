@@ -151,8 +151,8 @@ async def async_setup_entry(
                 async def _fetch_logs_with_delay() -> None:
                     """Fetch logs with optional delay for unlocking state."""
                     if new_state.state == "unlocking":
-                        LOGGER.debug("Waiting 2 seconds before fetching logs for unlocking state")
-                        await asyncio.sleep(2)
+                        LOGGER.debug("Waiting 4 seconds before fetching logs for unlocking state")
+                        await asyncio.sleep(4)
                     await log_manager.async_fetch_logs()
 
                 hass.async_create_task(_fetch_logs_with_delay())
