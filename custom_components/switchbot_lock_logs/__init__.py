@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Callable
 
 from switchbot import SwitchbotLock
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.core import Event, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import (
     CONF_DEVICE_ID,
@@ -28,7 +29,7 @@ from .lock_log_manager import SwitchBotLockLogManager
 from .storage import SwitchBotLockUserStore
 
 if TYPE_CHECKING:
-    pass
+    from homeassistant.helpers.event import EventStateChangedData
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -39,6 +40,7 @@ class SwitchBotLockLogsData:
 
     log_manager: SwitchBotLockLogManager
     mac_address: str
+    cancel_state_listener: Callable[[], None] | None = None
 
 
 type SwitchBotLockLogsConfigEntry = ConfigEntry[SwitchBotLockLogsData]
@@ -106,6 +108,37 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
+    # Find the lock entity and subscribe to state changes
+    lock_entity_id = await _find_lock_entity_id(hass, device_id)
+    if lock_entity_id:
+        LOGGER.debug("Subscribing to state changes for %s", lock_entity_id)
+
+        @callback
+        def _async_on_lock_state_change(event: Event[EventStateChangedData]) -> None:
+            """Handle lock state changes."""
+            old_state = event.data["old_state"]
+            new_state = event.data["new_state"]
+
+            if old_state is None or new_state is None:
+                return
+
+            # Only fetch logs if state actually changed
+            if old_state.state != new_state.state:
+                LOGGER.debug(
+                    "Lock state changed from %s to %s, fetching logs",
+                    old_state.state,
+                    new_state.state,
+                )
+                hass.async_create_task(log_manager.async_fetch_logs())
+
+        cancel_listener = async_track_state_change_event(
+            hass, [lock_entity_id], _async_on_lock_state_change
+        )
+        entry.runtime_data.cancel_state_listener = cancel_listener
+        entry.async_on_unload(cancel_listener)
+    else:
+        LOGGER.warning("Could not find lock entity for device %s", device_id)
+
     # Fetch initial logs
     hass.async_create_task(log_manager.async_fetch_logs())
 
@@ -129,6 +162,18 @@ async def _async_update_listener(
 ) -> None:
     """Handle options update."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def _find_lock_entity_id(hass: HomeAssistant, device_id: str) -> str | None:
+    """Find the lock entity ID for a device."""
+    ent_reg = er.async_get(hass)
+
+    # Find entities for this device that are locks
+    for entity in er.async_entries_for_device(ent_reg, device_id):
+        if entity.domain == "lock" and entity.platform == SWITCHBOT_DOMAIN:
+            return entity.entity_id
+
+    return None
 
 
 async def _get_switchbot_lock_device(
