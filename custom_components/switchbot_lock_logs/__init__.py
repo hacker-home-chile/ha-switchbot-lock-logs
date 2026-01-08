@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
@@ -42,13 +41,6 @@ if TYPE_CHECKING:
     from homeassistant.helpers.event import EventStateChangedData
     from switchbot import SwitchbotLock
 
-# Delay before fetching logs after state change (seconds)
-# This gives the lock firmware time to write the log entry
-LOG_FETCH_DELAY = 2.0
-
-# Minimum time between log fetches (seconds) - debouncing
-LOG_FETCH_DEBOUNCE = 3.0
-
 # Integration can only be configured via config entries
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -62,7 +54,6 @@ class SwitchBotLockLogsData:
     log_manager: SwitchBotLockLogManager
     mac_address: str
     cancel_state_listener: Callable[[], None] | None = None
-    _pending_fetch_task: asyncio.Task | None = field(default=None, repr=False)
 
 
 type SwitchBotLockLogsConfigEntry = ConfigEntry[SwitchBotLockLogsData]
@@ -141,7 +132,7 @@ async def async_setup_entry(
 
         @callback
         def _async_on_lock_state_change(event: Event[EventStateChangedData]) -> None:
-            """Handle lock state changes with debouncing."""
+            """Handle lock state changes."""
             old_state = event.data["old_state"]
             new_state = event.data["new_state"]
 
@@ -151,19 +142,11 @@ async def async_setup_entry(
             # Only fetch logs if state actually changed
             if old_state.state != new_state.state:
                 LOGGER.debug(
-                    "Lock state changed from %s to %s, scheduling log fetch",
+                    "Lock state changed from %s to %s, fetching logs",
                     old_state.state,
                     new_state.state,
                 )
-                # Cancel any pending fetch task (debouncing)
-                if entry.runtime_data._pending_fetch_task is not None:
-                    entry.runtime_data._pending_fetch_task.cancel()
-                    LOGGER.debug("Cancelled pending log fetch (debouncing)")
-
-                # Schedule a new fetch with delay
-                entry.runtime_data._pending_fetch_task = hass.async_create_task(
-                    _async_delayed_fetch_logs(log_manager, LOG_FETCH_DELAY)
-                )
+                hass.async_create_task(_async_fetch_logs(log_manager))
 
         cancel_listener = async_track_state_change_event(
             hass, [lock_entity_id], _async_on_lock_state_change
@@ -173,8 +156,8 @@ async def async_setup_entry(
     else:
         LOGGER.warning("Could not find lock entity for device %s", device_id)
 
-    # Fetch initial logs (with a small delay to let core integration settle)
-    hass.async_create_task(_async_delayed_fetch_logs(log_manager, 1.0))
+    # Fetch initial logs
+    hass.async_create_task(_async_fetch_logs(log_manager))
 
     return True
 
@@ -198,18 +181,10 @@ async def _async_update_listener(
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def _async_delayed_fetch_logs(
-    log_manager: SwitchBotLockLogManager,
-    delay: float,
-) -> None:
-    """Fetch logs after a delay, with error handling."""
+async def _async_fetch_logs(log_manager: SwitchBotLockLogManager) -> None:
+    """Fetch logs with error handling."""
     try:
-        await asyncio.sleep(delay)
-        LOGGER.debug("Fetching logs after %.1fs delay", delay)
         await log_manager.async_fetch_logs()
-    except asyncio.CancelledError:
-        LOGGER.debug("Log fetch cancelled (debounced)")
-        raise
     except Exception:
         LOGGER.exception("Error fetching logs")
 
@@ -384,7 +359,7 @@ async def _find_log_manager_for_device(
                 entry_id,
                 hass.config_entries.async_get_entry(entry_id).data.get(CONF_DEVICE_ID),
             )
-            for entry_id in log_managers.keys()
+            for entry_id in log_managers
             if hass.config_entries.async_get_entry(entry_id)
         ],
     )
