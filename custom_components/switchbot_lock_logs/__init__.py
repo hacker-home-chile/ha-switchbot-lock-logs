@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
-
-from switchbot import SwitchbotLock
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import Event, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
+from homeassistant.core import (
+    Event,
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+    callback,
+)
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import (
@@ -29,7 +35,10 @@ from .lock_log_manager import SwitchBotLockLogManager
 from .storage import SwitchBotLockUserStore
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from homeassistant.helpers.event import EventStateChangedData
+    from switchbot import SwitchbotLock
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -46,7 +55,10 @@ class SwitchBotLockLogsData:
 type SwitchBotLockLogsConfigEntry = ConfigEntry[SwitchBotLockLogsData]
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(
+    hass: HomeAssistant,
+    config: dict,  # noqa: ARG001
+) -> bool:
     """Set up the SwitchBot Lock Logs component."""
     hass.data.setdefault(DOMAIN, {})
 
@@ -81,10 +93,11 @@ async def async_setup_entry(
     # Find the SwitchBot lock device from the core integration
     lock_device = await _get_switchbot_lock_device(hass, device_id)
     if lock_device is None:
-        raise HomeAssistantError(
+        msg = (
             f"Could not find SwitchBot lock device. Make sure the core SwitchBot "
             f"integration is configured for this lock (device_id: {device_id})"
         )
+        raise HomeAssistantError(msg)
 
     # Create log manager
     log_manager = SwitchBotLockLogManager(
@@ -180,7 +193,9 @@ async def _get_switchbot_lock_device(
     hass: HomeAssistant, device_id: str
 ) -> SwitchbotLock | None:
     """Get the SwitchbotLock device from the core integration."""
-    # Find the config entry for this device
+    # Import here to avoid circular imports at runtime
+    from switchbot import SwitchbotLock  # noqa: PLC0415
+
     dev_reg = dr.async_get(hass)
     device = dev_reg.async_get(device_id)
 
@@ -200,25 +215,21 @@ async def _get_switchbot_lock_device(
         LOGGER.error("No SwitchBot config entry found for device: %s", device_id)
         return None
 
-    # Get the config entry
+    # Get the config entry and extract the lock device
     switchbot_entry = hass.config_entries.async_get_entry(switchbot_entry_id)
     if not switchbot_entry or not hasattr(switchbot_entry, "runtime_data"):
-        LOGGER.error("SwitchBot config entry has no runtime data: %s", switchbot_entry_id)
+        LOGGER.error(
+            "SwitchBot config entry has no runtime data: %s", switchbot_entry_id
+        )
         return None
 
-    # Get the coordinator from runtime_data
     coordinator = switchbot_entry.runtime_data
     if not coordinator:
         LOGGER.error("No coordinator in runtime data")
         return None
 
-    # The device should be available on the coordinator
     lock_device = getattr(coordinator, "device", None)
-    if lock_device is None:
-        LOGGER.error("No device on coordinator")
-        return None
-
-    if not isinstance(lock_device, SwitchbotLock):
+    if lock_device is None or not isinstance(lock_device, SwitchbotLock):
         LOGGER.error("Device is not a SwitchbotLock: %s", type(lock_device))
         return None
 

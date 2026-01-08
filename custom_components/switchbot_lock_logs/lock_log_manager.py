@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import Any
 
+from homeassistant.core import HomeAssistant, callback
 from switchbot import SwitchbotLock
 from switchbot.const import LockLogAction, LockLogSource
 
-from homeassistant.core import HomeAssistant, callback
-
 from .const import LOGGER
 from .storage import SwitchBotLockUserStore
-
-if TYPE_CHECKING:
-    pass
 
 
 class SwitchBotLockLogManager:
@@ -36,7 +33,8 @@ class SwitchBotLockLogManager:
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
-        """Add a listener to be notified of log updates.
+        """
+        Add a listener to be notified of log updates.
 
         Returns a function to remove the listener.
         """
@@ -57,7 +55,8 @@ class SwitchBotLockLogManager:
     async def async_fetch_logs(
         self, base_time: int = 0, max_entries: int = 10
     ) -> list[dict[str, Any]]:
-        """Fetch logs from device and enrich with user names.
+        """
+        Fetch logs from device and enrich with user names.
 
         Returns all logs without filtering. Filtering for sensor updates
         is handled by the sensor itself.
@@ -127,7 +126,8 @@ class SwitchBotLockLogManager:
 
     @staticmethod
     def _extract_user_id(payload: str) -> int | None:
-        """Extract user ID from log payload.
+        """
+        Extract user ID from log payload.
 
         Payload formats:
         - 59 03 XX YY 00 00 (hex string) - Type 3 pattern

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
@@ -13,7 +13,12 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from .const import CONF_DEVICE_ID, CONF_DEVICE_NAME, CONF_MAC_ADDRESS, DOMAIN, SWITCHBOT_DOMAIN
+from .const import (
+    CONF_DEVICE_ID,
+    CONF_DEVICE_NAME,
+    CONF_MAC_ADDRESS,
+    SWITCHBOT_DOMAIN,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -34,14 +39,16 @@ async def async_setup_entry(
     device_name = entry.data[CONF_DEVICE_NAME]
     mac_address = entry.data[CONF_MAC_ADDRESS]
 
-    async_add_entities([
-        SwitchBotLockLastActivitySensor(
-            log_manager, device_id, device_name, mac_address
-        ),
-        SwitchBotLockLastUserSensor(
-            log_manager, device_id, device_name, mac_address
-        ),
-    ])
+    async_add_entities(
+        [
+            SwitchBotLockLastActivitySensor(
+                log_manager, device_id, device_name, mac_address
+            ),
+            SwitchBotLockLastUserSensor(
+                log_manager, device_id, device_name, mac_address
+            ),
+        ]
+    )
 
 
 class SwitchBotLockLogSensorBase(SensorEntity):
@@ -103,7 +110,7 @@ class SwitchBotLockLastActivitySensor(SwitchBotLockLogSensorBase):
     def native_value(self) -> datetime | None:
         """Return timestamp of last activity."""
         if latest := self._log_manager.latest_log:
-            return datetime.fromtimestamp(latest["timestamp"], tz=timezone.utc)
+            return datetime.fromtimestamp(latest["timestamp"], tz=UTC)
         return None
 
     @property
@@ -142,7 +149,8 @@ class SwitchBotLockLastUserSensor(SwitchBotLockLogSensorBase):
 
     @callback
     def _handle_log_update(self) -> None:
-        """Handle log update notification.
+        """
+        Handle log update notification.
 
         Filters logs to find the newest entry that:
         - Is newer than the last processed timestamp
@@ -166,7 +174,8 @@ class SwitchBotLockLastUserSensor(SwitchBotLockLogSensorBase):
 
     @staticmethod
     def _is_valid_payload(payload: str) -> bool:
-        """Check if payload is valid (non-zero).
+        """
+        Check if payload is valid (non-zero).
 
         A valid payload indicates a real user action rather than a system event.
         """
