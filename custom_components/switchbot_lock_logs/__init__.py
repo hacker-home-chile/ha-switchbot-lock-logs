@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -146,7 +147,15 @@ async def async_setup_entry(
                     old_state.state,
                     new_state.state,
                 )
-                hass.async_create_task(log_manager.async_fetch_logs())
+
+                async def _fetch_logs_with_delay() -> None:
+                    """Fetch logs with optional delay for unlocking state."""
+                    if new_state.state == "unlocking":
+                        LOGGER.debug("Waiting 2 seconds before fetching logs for unlocking state")
+                        await asyncio.sleep(2)
+                    await log_manager.async_fetch_logs()
+
+                hass.async_create_task(_fetch_logs_with_delay())
 
         cancel_listener = async_track_state_change_event(
             hass, [lock_entity_id], _async_on_lock_state_change
