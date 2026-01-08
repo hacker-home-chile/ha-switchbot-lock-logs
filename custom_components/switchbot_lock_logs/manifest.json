@@ -8,6 +8,6 @@
   "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/hacker-home-chile/ha-switchbot-lock-logs/issues",
-  "requirements": ["PySwitchbot @ git+https://github.com/hacker-home-chile/pySwitchbot.git@master"],
-  "version": "1.2.2"
+  "requirements": ["PySwitchbot @ git+https://github.com/hacker-home-chile/pySwitchbot.git@d48ac20"],
+  "version": "1.3.0"
 }
