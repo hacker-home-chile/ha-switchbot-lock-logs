@@ -97,6 +97,7 @@ class SwitchBotLockLastActivitySensor(SwitchBotLockLogSensorBase):
         """Initialize sensor."""
         super().__init__(log_manager, device_id, device_name, mac_address)
         self._attr_unique_id = f"{mac_address}-last_activity"
+        self._attr_name = "Last activity"
 
     @property
     def native_value(self) -> datetime | None:
@@ -135,6 +136,7 @@ class SwitchBotLockLastUserSensor(SwitchBotLockLogSensorBase):
         """Initialize sensor."""
         super().__init__(log_manager, device_id, device_name, mac_address)
         self._attr_unique_id = f"{mac_address}-last_user"
+        self._attr_name = "Last user"
         self._last_processed_timestamp: int = 0
         self._current_log: dict[str, Any] | None = None
 
