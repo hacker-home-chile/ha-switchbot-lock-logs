@@ -1,46 +1,106 @@
-# Notice
+# SwitchBot Lock Logs
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
-HAVE FUN! 😎
+A Home Assistant custom integration that adds lock operation history (logs) to SwitchBot locks. This is a companion integration that works alongside the core SwitchBot integration.
 
-## Why?
+## Features
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+- **Last Activity Sensor**: Shows the timestamp of the last lock operation
+- **Last User Sensor**: Shows who last used the lock (when user names are mapped)
+- **User Name Mapping**: Map user IDs to friendly names (e.g., "Dad's Fingerprint", "Guest Code")
+- **Service to Fetch Logs**: Manually trigger log fetching from the lock
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+## Requirements
 
-## What?
+- Home Assistant 2024.1.0 or newer
+- HACS installed
+- Core SwitchBot integration configured with your lock
+- SwitchBot Lock, Lock Pro, Lock Lite, or Lock Ultra
 
-This repository contains multiple files, here is a overview:
+## Installation
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+### Via HACS (Recommended)
 
-## How?
+1. Open HACS in Home Assistant
+2. Click the three dots in the top right corner
+3. Select "Custom repositories"
+4. Add `https://github.com/hacker-home-chile/ha-switchbot-lock-logs` as an Integration
+5. Click "Add"
+6. Search for "SwitchBot Lock Logs" in HACS
+7. Click "Download"
+8. Restart Home Assistant
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+### Manual Installation
 
-## Next steps
+1. Download the latest release from GitHub
+2. Copy the `custom_components/switchbot_lock_logs` folder to your Home Assistant's `custom_components` directory
+3. Restart Home Assistant
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon) to https://github.com/home-assistant/brands.
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+## Configuration
+
+1. Make sure your SwitchBot lock is already configured in the core SwitchBot integration
+2. Go to **Settings** > **Devices & Services** > **Add Integration**
+3. Search for "SwitchBot Lock Logs"
+4. Select your lock from the dropdown
+5. Click "Submit"
+
+## Services
+
+### `switchbot_lock_logs.get_lock_logs`
+
+Fetch lock logs from the device.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `device_id` | string | The lock device ID |
+| `max_entries` | int | Maximum number of logs to fetch (default: 20) |
+| `base_time` | int | Unix timestamp - only get logs after this time (default: 0 = all) |
+
+### `switchbot_lock_logs.set_lock_user_name`
+
+Map a user ID to a friendly name.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `device_id` | string | The lock device ID |
+| `user_id` | int | User ID from lock logs (0-255) |
+| `name` | string | Friendly name for this user |
+
+### `switchbot_lock_logs.delete_lock_user_name`
+
+Remove a user name mapping.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `device_id` | string | The lock device ID |
+| `user_id` | int | User ID to remove |
+
+## Sensors
+
+| Sensor | Description |
+|--------|-------------|
+| Last Activity | Timestamp of the last lock operation |
+| Last User | Name of the last user (if mapped) |
+
+## Finding User IDs
+
+To find user IDs for mapping:
+
+1. Call the `switchbot_lock_logs.get_lock_logs` service
+2. Check the response for the `user_id` field in each log entry
+3. Match the user ID with the action (fingerprint unlock, keypad code, etc.)
+4. Use `set_lock_user_name` to map the ID to a name
+
+## Dependencies
+
+This integration requires a forked version of pySwitchbot that includes lock log support:
+- [hacker-home-chile/pySwitchbot](https://github.com/hacker-home-chile/pySwitchbot)
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request on GitHub.

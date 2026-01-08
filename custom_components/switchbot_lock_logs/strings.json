@@ -1,0 +1,91 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This lock is already configured for log tracking.",
+      "no_locks_found": "No SwitchBot locks found. Please configure a SwitchBot lock in the core SwitchBot integration first."
+    },
+    "error": {
+      "device_not_found": "The selected device was not found.",
+      "unknown": "An unexpected error occurred."
+    },
+    "step": {
+      "user": {
+        "title": "Select SwitchBot Lock",
+        "description": "Select a SwitchBot lock to add operation history tracking.",
+        "data": {
+          "device_id": "Lock device"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_activity": {
+        "name": "Last activity"
+      },
+      "last_user": {
+        "name": "Last user"
+      }
+    }
+  },
+  "exceptions": {
+    "device_not_configured": {
+      "message": "This device is not configured for lock logs. Add it via the integration setup first."
+    },
+    "fetch_logs_error": {
+      "message": "Failed to fetch lock logs from the device."
+    }
+  },
+  "services": {
+    "get_lock_logs": {
+      "name": "Get lock logs",
+      "description": "Retrieve lock operation history and update sensors.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The lock device ID."
+        },
+        "max_entries": {
+          "name": "Maximum entries",
+          "description": "Maximum number of log entries to retrieve."
+        },
+        "base_time": {
+          "name": "Start time",
+          "description": "Unix timestamp - only retrieve logs after this time (0 = all logs)."
+        }
+      }
+    },
+    "set_lock_user_name": {
+      "name": "Set lock user name",
+      "description": "Map a user ID to a friendly name for lock logs.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The lock device ID."
+        },
+        "user_id": {
+          "name": "User ID",
+          "description": "User ID from lock logs (found in payload, typically 0-255)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Friendly name for this user (e.g., \"Dad's Fingerprint\", \"Guest Code\")."
+        }
+      }
+    },
+    "delete_lock_user_name": {
+      "name": "Delete lock user name",
+      "description": "Remove a user name mapping.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The lock device ID."
+        },
+        "user_id": {
+          "name": "User ID",
+          "description": "User ID to remove."
+        }
+      }
+    }
+  }
+}

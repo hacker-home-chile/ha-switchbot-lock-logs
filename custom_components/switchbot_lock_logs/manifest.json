@@ -1,0 +1,13 @@
+{
+  "domain": "switchbot_lock_logs",
+  "name": "SwitchBot Lock Logs",
+  "codeowners": ["@hacker-home-chile"],
+  "config_flow": true,
+  "dependencies": ["switchbot"],
+  "documentation": "https://github.com/hacker-home-chile/ha-switchbot-lock-logs",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/hacker-home-chile/ha-switchbot-lock-logs/issues",
+  "requirements": ["PySwitchbot @ git+https://github.com/hacker-home-chile/pySwitchbot.git@master"],
+  "version": "1.0.0"
+}
