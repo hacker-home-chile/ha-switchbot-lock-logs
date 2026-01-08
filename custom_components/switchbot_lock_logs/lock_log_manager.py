@@ -60,10 +60,23 @@ class SwitchBotLockLogManager:
 
         Returns all logs without filtering. Filtering for sensor updates
         is handled by the sensor itself.
+
+        This method handles BLE errors gracefully and returns cached logs
+        if the fetch fails.
         """
         # Fetch from BLE device
         LOGGER.debug("Fetching logs for %s", self._mac)
-        logs = await self._lock_device.get_logs(base_time, max_entries)
+
+        try:
+            logs = await self._lock_device.get_logs(base_time, max_entries)
+        except Exception as err:
+            LOGGER.warning(
+                "Failed to fetch logs for %s: %s. Returning cached logs.",
+                self._mac,
+                err,
+            )
+            # Return cached logs on error - don't clear existing data
+            return self._latest_logs.copy()
 
         if not logs:
             LOGGER.debug("No logs retrieved for %s", self._mac)
