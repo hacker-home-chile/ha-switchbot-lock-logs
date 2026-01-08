@@ -7,7 +7,7 @@ get_lock_logs:
       example: "abc123def456"
       selector:
         device:
-          integration: switchbot_lock_logs
+          integration: switchbot
     max_entries:
       required: false
       default: 20
@@ -33,7 +33,7 @@ set_lock_user_name:
       example: "abc123def456"
       selector:
         device:
-          integration: switchbot_lock_logs
+          integration: switchbot
     user_id:
       required: true
       example: 10
@@ -55,7 +55,7 @@ delete_lock_user_name:
       example: "abc123def456"
       selector:
         device:
-          integration: switchbot_lock_logs
+          integration: switchbot
     user_id:
       required: true
       example: 10

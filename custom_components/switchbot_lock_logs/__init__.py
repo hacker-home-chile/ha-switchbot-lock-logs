@@ -16,6 +16,7 @@ from homeassistant.core import (
     callback,
 )
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event
@@ -39,6 +40,9 @@ if TYPE_CHECKING:
 
     from homeassistant.helpers.event import EventStateChangedData
     from switchbot import SwitchbotLock
+
+# Integration can only be configured via config entries
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
@@ -318,10 +322,37 @@ async def _find_log_manager_for_device(
         "log_managers", {}
     )
 
+    LOGGER.debug(
+        "Looking for log manager for device_id: %s, available managers: %d",
+        device_id,
+        len(log_managers),
+    )
+
     # Look for entry that matches this device
     for entry_id, log_manager in log_managers.items():
         entry = hass.config_entries.async_get_entry(entry_id)
-        if entry and entry.data.get(CONF_DEVICE_ID) == device_id:
-            return log_manager
+        if entry:
+            entry_device_id = entry.data.get(CONF_DEVICE_ID)
+            LOGGER.debug(
+                "Checking entry %s with device_id: %s (match: %s)",
+                entry_id,
+                entry_device_id,
+                entry_device_id == device_id,
+            )
+            if entry_device_id == device_id:
+                LOGGER.debug("Found matching log manager for device %s", device_id)
+                return log_manager
 
+    LOGGER.warning(
+        "No log manager found for device_id: %s. Available entries: %s",
+        device_id,
+        [
+            (
+                entry_id,
+                hass.config_entries.async_get_entry(entry_id).data.get(CONF_DEVICE_ID),
+            )
+            for entry_id in log_managers.keys()
+            if hass.config_entries.async_get_entry(entry_id)
+        ],
+    )
     return None
